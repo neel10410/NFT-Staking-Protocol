@@ -6,14 +6,31 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 contract Staking is
     Initializable,
     ERC20Upgradeable,
     OwnableUpgradeable,
-    UUPSUpgradeable
+    UUPSUpgradeable,
+    IERC721Receiver
 {
-    uint256 rewardPerBlock = 100;
+    // Reward per block
+    uint256 public rewardPerBlock;
+    // bool to store whether staking is pause or not
+    bool public isPause;
+
+    event Staked(address indexed nftAddress, uint256 indexed nftId);
+    event Unstaked(address indexed nftAddress, uint256 indexed nftId);
+    event ClaimedRewards(address indexed nftAddress, uint256 indexed nftId);
+
+    // userData mapping gives UserInfo struct of nftId of nftAddress
+    mapping(address nftAddress => mapping(uint256 nftId => UserInfo))
+        public userData;
+    // allowNftAddress mapping shows whether given nftAddress is allowed or not
+    mapping(address nftAddress => bool allowed) public allowNftAddress;
+
+    // UserInfo struct to store data of user who staked NFT
     struct UserInfo {
         address user;
         uint256 stakeAtBlock;
@@ -21,79 +38,174 @@ contract Staking is
         uint256 unstakeAtBlock;
     }
 
-    bool isPause;
-    mapping(address nftAddress => mapping(uint256 nftId => UserInfo))
-        public userData;
-    mapping(address nftAddress => bool) public allowNftAddress;
-
-    function initialize() public initializer {
-        __ERC20_init("RewardToken", "RT");
-        __Ownable_init(msg.sender);
-        __UUPSUpgradeable_init();
-    }
+    /**
+     * @dev Constructor which disable the initialize function
+     */
     constructor() {
         _disableInitializers();
     }
 
+    /**
+     * @dev onERC721Received function is used to receive the NFT in the contract
+     */
+    function onERC721Received(
+        address operator,
+        address from,
+        uint256 tokenId,
+        bytes calldata data
+    ) public override returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
+
+    /**
+     * @dev Initialize the contract by creating ERC20 token and set the owner of contract
+     */
+    function initialize() public initializer {
+        __ERC20_init("RewardToken", "RT");
+        __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
+        rewardPerBlock = 100;
+    }
+
+    /**
+     * @dev Stake the NFT of user and stotes user info in a stuct
+     * @param nftAddress Address of NFT which user wants to stake
+     * @param nftId Id of the NFT which user wants to stake
+     */
     function stake(address nftAddress, uint256 nftId) external returns (bool) {
         require(allowNftAddress[nftAddress], "nft not allowed");
         require(!isPause, "staking is paused");
-        require(nftAddress != address(0), "must not address(0)");
-        require(IERC721(nftAddress).ownerOf(nftId) == msg.sender, "not owner");
+        require(
+            IERC721(nftAddress).ownerOf(nftId) == msg.sender,
+            "sender is not owner of nft"
+        );
 
-        IERC721(nftAddress).transferFrom(msg.sender, address(this), nftId);
+        // Transfer the NFT from user to this contract
+        IERC721(nftAddress).safeTransferFrom(msg.sender, address(this), nftId);
 
+        // Updating the UserInfo struct of the user
         UserInfo memory userInfo = UserInfo(msg.sender, block.number, 0, 0);
-
         userData[nftAddress][nftId] = userInfo;
+
+        emit Staked(nftAddress, nftId);
         return true;
     }
 
+    /**
+     * @dev Unstake NFT of user, unbond for 1 day period and calculates the rewards of user in ERC20 token
+     * @param nftAddress Address of NFT which user wants to unstake
+     * @param nftId Id of the NFT which user wants to unstake
+     */
     function unstake(address nftAddress, uint256 nftId) external {
+        // getting UserInfo struct of user
         UserInfo memory _userInfo = userData[nftAddress][nftId];
 
-        require(nftAddress != address(0), "must not address(0)");
         require(_userInfo.user == msg.sender, "sender is not owner of nft");
         require(_userInfo.unstakeAtBlock == 0, "already unstaked");
 
+        // Calculation of rewards of user
         uint256 blockPerDay = 7200;
         uint256 totalBlocksStaked = (block.number - _userInfo.stakeAtBlock);
         uint256 rewardOfUser = (totalBlocksStaked + blockPerDay) *
             rewardPerBlock;
 
+        // Updating the UserInfo struct of the user
         _userInfo.rewardDebt = rewardOfUser;
         _userInfo.stakeAtBlock = 0;
         _userInfo.unstakeAtBlock = block.number;
-
         userData[nftAddress][nftId] = _userInfo;
+
+        emit Unstaked(nftAddress, nftId);
     }
 
+    /**
+     * @dev Tranfer the NFT and rewards to the user after unbonding period who unstake NFT
+     * @param nftAddress Address of NFT which user wants to claim rewards
+     * @param nftId Id of the NFT which user wants to claim rewards
+     */
     function claimRewards(address nftAddress, uint256 nftId) external {
+        // getting UserInfo struct of user
         UserInfo memory _userInfo = userData[nftAddress][nftId];
 
-        require(nftAddress != address(0), "must not address(0)");
+        require(_userInfo.rewardDebt != 0, "already claimRewards");
         require(_userInfo.user == msg.sender, "sender is not owner of nft");
         require(
-            _userInfo.unstakeAtBlock + 7200 > block.number,
+            _userInfo.unstakeAtBlock + 7200 < block.number,
             "unbonding period"
         );
 
+        // Mint ERC20 token to the user equivalent to his rewardDebt
         uint256 rewardOfUser = _userInfo.rewardDebt;
         _mint(msg.sender, rewardOfUser);
+
+        // Trandfer the NFT to user form this address
+        IERC721(nftAddress).approve(address(this), nftId);
+        IERC721(nftAddress).safeTransferFrom(address(this), msg.sender, nftId);
+
+        // Updating the UserInfo struct of the user
+        _userInfo.rewardDebt = 0;
+        _userInfo.stakeAtBlock = 0;
+        _userInfo.unstakeAtBlock = 0;
+        userData[nftAddress][nftId] = _userInfo;
+
+        emit ClaimedRewards(nftAddress, nftId);
     }
 
+    /**
+     * @dev Allow and disallow the NFT to stake in protocol by owner
+     * @param nftAddress Address of NFT which owner wants to allow
+     * @param allowed boolean for allow and disallow the NFT address
+     */
     function allowNft(address nftAddress, bool allowed) external onlyOwner {
         allowNftAddress[nftAddress] = allowed;
     }
 
+    /**
+     * @dev Pause or unpause the staking of NFT by owner
+     * @param _isPause boolean to pause or unpause staking
+     */
     function pauseStaking(bool _isPause) external onlyOwner {
         isPause = _isPause;
     }
 
+    /**
+     * @dev Change the rewards of staking NFT by owner
+     * @param _newRewardPerBlock number of reward per block for staking NFT
+     */
     function updateRewards(uint256 _newRewardPerBlock) external onlyOwner {
         rewardPerBlock = _newRewardPerBlock;
     }
 
+    /**
+     * @dev Allow and disallow the NFT to stake in protocol by owner
+     * @param nftAddress Address of NFT which user wants to get data
+     * @param nftId Id of NFT which user wants to get data
+     */
+    function getUserData(
+        address nftAddress,
+        uint256 nftId
+    )
+        external
+        returns (
+            address user,
+            uint256 stakeAtBlock,
+            uint256 rewardDebt,
+            uint256 unstakeAtBlock
+        )
+    {
+        UserInfo storage _userInfo = userData[nftAddress][nftId];
+        return (
+            _userInfo.user,
+            _userInfo.stakeAtBlock,
+            _userInfo.rewardDebt,
+            _userInfo.unstakeAtBlock
+        );
+    }
+
+    /**
+     * @dev To implement the new implementation
+     * @param newImplementation address of new implementation
+     */
     function _authorizeUpgrade(
         address newImplementation
     ) internal override onlyOwner {}

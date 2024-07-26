@@ -11,16 +11,16 @@ contract Deploy is Script {
     Staking stakingImp;
     Staking stakingProxy;
     function run() public {
-        // vm.createSelectFork(
-        //     vm.rpcUrl(
-        //         "https://eth-sepolia.g.alchemy.com/v2/KdgQDmf9ZbfZ2KIwLN5XB6Lz_bSgblZp"
-        //     )
-        // );
-        // uint256 deployPrivateKey = vm.envUint("PRIVATE_KEY");
-        // vm.startBroadcast(deployPrivateKey);
+        vm.createSelectFork(
+            vm.rpcUrl(
+                "https://eth-sepolia.g.alchemy.com/v2/KdgQDmf9ZbfZ2KIwLN5XB6Lz_bSgblZp"
+            )
+        );
+        uint256 deployPrivateKey = vm.envUint("PRIVATE_KEY");
+        vm.startBroadcast(deployPrivateKey);
         deployStake();
         printStake();
-        // vm.stopBroadcast();
+        vm.stopBroadcast();
     }
 
     function deployStake() internal {
