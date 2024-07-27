@@ -28,8 +28,6 @@ The NFT Staking Protocol is for staking the NFT and claiming the rewards for sta
 - **Install Dependencies**
       
       forge install
-      forge install OpenZeppelin/openzeppelin-contracts --no-commit
-      forge install OpenZeppelin/openzeppelin-contracts-upgradeable --no-commit
 
 - **Compile the Contracts**
   
