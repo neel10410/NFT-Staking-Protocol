@@ -7,13 +7,15 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract Staking is
     Initializable,
     ERC20Upgradeable,
     OwnableUpgradeable,
     UUPSUpgradeable,
-    IERC721Receiver
+    IERC721Receiver,
+    ReentrancyGuard
 {
     // Reward per block
     uint256 public rewardPerBlock;
@@ -72,7 +74,10 @@ contract Staking is
      * @param nftAddress Address of NFT which user wants to stake
      * @param nftId Id of the NFT which user wants to stake
      */
-    function stake(address nftAddress, uint256 nftId) external returns (bool) {
+    function stake(
+        address nftAddress,
+        uint256 nftId
+    ) external nonReentrant returns (bool) {
         require(allowNftAddress[nftAddress], "nft not allowed");
         require(!isPause, "staking is paused");
         require(
@@ -96,7 +101,7 @@ contract Staking is
      * @param nftAddress Address of NFT which user wants to unstake
      * @param nftId Id of the NFT which user wants to unstake
      */
-    function unstake(address nftAddress, uint256 nftId) external {
+    function unstake(address nftAddress, uint256 nftId) external nonReentrant {
         // getting UserInfo struct of user
         UserInfo memory _userInfo = userData[nftAddress][nftId];
 
@@ -123,7 +128,10 @@ contract Staking is
      * @param nftAddress Address of NFT which user wants to claim rewards
      * @param nftId Id of the NFT which user wants to claim rewards
      */
-    function claimRewards(address nftAddress, uint256 nftId) external {
+    function claimRewards(
+        address nftAddress,
+        uint256 nftId
+    ) external nonReentrant {
         // getting UserInfo struct of user
         UserInfo memory _userInfo = userData[nftAddress][nftId];
 
@@ -139,7 +147,6 @@ contract Staking is
         _mint(msg.sender, rewardOfUser);
 
         // Trandfer the NFT to user form this address
-        IERC721(nftAddress).approve(address(this), nftId);
         IERC721(nftAddress).safeTransferFrom(address(this), msg.sender, nftId);
 
         // Updating the UserInfo struct of the user

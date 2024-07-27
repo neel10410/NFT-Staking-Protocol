@@ -47,10 +47,11 @@ The NFT Staking Protocol is for staking the NFT and claiming the rewards for sta
 
 - **Deployed Address**
       
-    | Contract Name | Address                                                                                                                       |
-    | ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-    | Staking Proxy | [0xd946f4Ea11BEAc422aEa19451cEF14297D625567](https://sepolia.etherscan.io/address/0xd946f4ea11beac422aea19451cef14297d625567) |
-    | Staking NFT   | [0xa4AAFF7d77c0F1FaF37915cf3290b14A0b536565](https://sepolia.etherscan.io/address/0xa4aaff7d77c0f1faf37915cf3290b14a0b536565) |
+    | Contract Name                | Address                                                                                                                       |
+    | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+    | Staking Proxy                | [0x66Fa8fb7BE4C19434D8481294856b965cb804a67](https://sepolia.etherscan.io/address/0x66fa8fb7be4c19434d8481294856b965cb804a67) |
+    | Staking NFT Implementation-1 | [0x1D41d75042747574d4943800c7184A5993F638d4](https://sepolia.etherscan.io/address/0x1d41d75042747574d4943800c7184a5993f638d4) |
+    | Staking NFT Implementation-2 | [0x331E7758A9188d8afc5FA3883Ad7EF238169a119](https://sepolia.etherscan.io/address/0x331e7758a9188d8afc5fa3883ad7ef238169a119) |
 
 
 ## Testing
@@ -60,11 +61,30 @@ The protocol functionalities are tested using the Foundry framework. To run the 
 
 - **Test Coverage**
       
+      Ran 10 tests for test/StakingTest.t.sol:StakingTest
+      [PASS] testAllowNft() (gas: 42511)
+      [PASS] testClaimRewards() (gas: 267170)
+      [PASS] testIsPauseAtStart() (gas: 16081)
+      [PASS] testPauseStaking() (gas: 33884)
+      [PASS] testRewardPerBlockAtStart() (gas: 15958)
+      [PASS] testStake() (gas: 183745)
+      [PASS] testStakeRquireStatements() (gas: 232866)
+      [PASS] testUnstake() (gas: 223025)
+      [PASS] testUpdateRewards() (gas: 25993)
+      [PASS] test_authorizeUpgrade() (gas: 21963)
+      Suite result: ok. 10 passed; 0 failed; 0 skipped; finished in 29.42ms (24.03ms CPU time)
+
+      Ran 1 test for script/Deploy.s.sol:Deploy
+      [PASS] testScript() (gas: 3218192)
+      Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 5.77s (5.76s CPU time)
+
+      Ran 2 test suites in 5.80s (5.79s CPU time): 11 tests passed, 0 failed, 0 skipped (11 total tests)
       | File            | % Lines         | % Statements    | % Branches      | % Funcs         |
       | --------------- | --------------- | --------------- | --------------- | --------------- |
       | src/MockNft.sol | 100.00% (1/1)   | 100.00% (1/1)   | 100.00% (0/0)   | 100.00% (2/2)   |
-      | src/Staking.sol | 100.00% (40/40) | 100.00% (42/42) | 100.00% (16/16) | 100.00% (11/11) |
-      | Total           | 100.00% (41/41) | 100.00% (43/43) | 100.00% (16/16) | 100.00% (13/13) |
+      | src/Staking.sol | 100.00% (42/42) | 100.00% (44/44) | 100.00% (16/16) | 100.00% (11/11) |
+      | Total           | 100.00% (43/43) | 100.00% (45/45) | 100.00% (16/16) | 100.00% (13/13) |
+
 
 
 ## Contributing

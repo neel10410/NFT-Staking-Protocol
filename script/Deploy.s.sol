@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {Staking} from "../src/Staking.sol";
+import {Staking, UUPSUpgradeable} from "../src/Staking.sol";
 import {Script} from "../forge-std/Script.sol";
 import {Test} from "../forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -20,6 +20,7 @@ contract Deploy is Script {
         vm.startBroadcast(deployPrivateKey);
         deployStake();
         printStake();
+        // deployUpgradeStake()
         vm.stopBroadcast();
     }
 
@@ -38,4 +39,15 @@ contract Deploy is Script {
     function testScript() public {
         run();
     }
+
+    // To change the implementation
+    // function deployUpgradeStake() internal {
+    //     stakingProxy = Staking(0x66Fa8fb7BE4C19434D8481294856b965cb804a67);
+    //     stakingImp = new Staking();
+    //     bytes memory data = abi.encodeCall(stakingImp.initializeV2, ());
+    //     UUPSUpgradeable(address(stakingProxy)).upgradeToAndCall(
+    //         address(stakingImp),
+    //         data
+    //     );
+    // }
 }
