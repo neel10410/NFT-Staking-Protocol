@@ -8,6 +8,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "forge-std/console.sol";
 
 contract Staking is
     Initializable,
@@ -21,6 +22,9 @@ contract Staking is
     uint256 public rewardPerBlock;
     // bool to store whether staking is pause or not
     bool public isPause;
+
+    uint256[] public blockNumbers;
+    mapping(uint256 blockNum => uint256 reward) public updatedRewards;
 
     event Staked(address indexed nftAddress, uint256 indexed nftId);
     event Unstaked(address indexed nftAddress, uint256 indexed nftId);
@@ -67,6 +71,8 @@ contract Staking is
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
         rewardPerBlock = 100;
+        blockNumbers.push(block.number);
+        updatedRewards[block.number] = 100;
     }
 
     /**
@@ -109,10 +115,45 @@ contract Staking is
         require(_userInfo.unstakeAtBlock == 0, "already unstaked");
 
         // Calculation of rewards of user
+
+        uint256 rewardIndex;
+
+        uint256 len = blockNumbers.length;
+        for (uint i; i < len; i++) {
+            console.log("block number", blockNumbers[i]);
+            console.log("user block", _userInfo.stakeAtBlock);
+            if (_userInfo.stakeAtBlock < blockNumbers[i]) {
+                rewardIndex = i;
+                break;
+            }
+        }
+
+        uint256 totalReward;
+        // user=> block.number array[0] = 1
+        // 10 block => update reward to 500 array[0,1] = 1,11
+        // 20 block => user unstake = 21
+        for (uint j = rewardIndex; j < len; j++) {
+            if (j == rewardIndex) {
+                totalReward +=
+                    (blockNumbers[j] - _userInfo.stakeAtBlock) *
+                    updatedRewards[blockNumbers[j - 1]];
+                console.log("first", totalReward);
+            } else if (j == (len - 1)) {
+                totalReward +=
+                    (block.number - blockNumbers[j]) *
+                    updatedRewards[blockNumbers[j]];
+                console.log("second", totalReward);
+            } else {
+                totalReward +=
+                    (blockNumbers[j] - blockNumbers[j - 1]) *
+                    updatedRewards[blockNumbers[j - 1]];
+                console.log("third", totalReward);
+            }
+        }
+
         uint256 blockPerDay = 7200;
-        uint256 totalBlocksStaked = (block.number - _userInfo.stakeAtBlock);
-        uint256 rewardOfUser = (totalBlocksStaked + blockPerDay) *
-            rewardPerBlock;
+        uint256 rewardPerDay = 7200 * rewardPerBlock;
+        uint256 rewardOfUser = totalReward + rewardPerDay;
 
         // Updating the UserInfo struct of the user
         _userInfo.rewardDebt = rewardOfUser;
@@ -180,6 +221,8 @@ contract Staking is
      * @param _newRewardPerBlock number of reward per block for staking NFT
      */
     function updateRewards(uint256 _newRewardPerBlock) external onlyOwner {
+        blockNumbers.push(block.number);
+        updatedRewards[block.number] = _newRewardPerBlock;
         rewardPerBlock = _newRewardPerBlock;
     }
 
