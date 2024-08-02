@@ -109,6 +109,7 @@ contract Staking is
      */
     function unstake(address nftAddress, uint256 nftId) external nonReentrant {
         // getting UserInfo struct of user
+        blockNumbers.push(block.number);
         UserInfo memory _userInfo = userData[nftAddress][nftId];
 
         require(_userInfo.user == msg.sender, "sender is not owner of nft");
@@ -119,26 +120,25 @@ contract Staking is
         uint256 rewardIndex;
 
         uint256 len = blockNumbers.length;
-        for (uint i; i < len; i++) {
+        for (uint i = 0; i < len; i++) {
             console.log("block number", blockNumbers[i]);
             console.log("user block", _userInfo.stakeAtBlock);
-            if (_userInfo.stakeAtBlock < blockNumbers[i]) {
+            if (_userInfo.stakeAtBlock <= blockNumbers[i]) {
                 rewardIndex = i;
+                console.log("reward index", rewardIndex);
                 break;
             }
         }
 
         uint256 totalReward;
-        // user=> block.number array[0] = 1
-        // 10 block => update reward to 500 array[0,1] = 1,11
-        // 20 block => user unstake = 21
-        for (uint j = rewardIndex; j < len; j++) {
-            if (j == rewardIndex) {
-                totalReward +=
-                    (blockNumbers[j] - _userInfo.stakeAtBlock) *
-                    updatedRewards[blockNumbers[j - 1]];
-                console.log("first", totalReward);
-            } else if (j == (len - 1)) {
+
+        totalReward +=
+            (blockNumbers[rewardIndex] - _userInfo.stakeAtBlock) *
+            updatedRewards[blockNumbers[rewardIndex - 1]];
+        console.log("first", totalReward);
+        console.log("uodate", updatedRewards[blockNumbers[rewardIndex - 1]]);
+        for (uint j = rewardIndex; j < len - 1; j++) {
+            if (j == (len - 2)) {
                 totalReward +=
                     (block.number - blockNumbers[j]) *
                     updatedRewards[blockNumbers[j]];
@@ -150,6 +150,7 @@ contract Staking is
                 console.log("third", totalReward);
             }
         }
+        console.log("rewardPerBlock:", totalReward);
 
         uint256 blockPerDay = 7200;
         uint256 rewardPerDay = 7200 * rewardPerBlock;
@@ -160,6 +161,7 @@ contract Staking is
         _userInfo.stakeAtBlock = 0;
         _userInfo.unstakeAtBlock = block.number;
         userData[nftAddress][nftId] = _userInfo;
+        blockNumbers.pop();
 
         emit Unstaked(nftAddress, nftId);
     }

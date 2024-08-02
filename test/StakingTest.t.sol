@@ -62,34 +62,35 @@ contract StakingTest is Test {
         vm.stopPrank();
     }
 
-    function testRe() public {
-        allowMockNft();
-        uint256 day1 = block.number + 10;
-        vm.roll(day1);
-        vm.startPrank(userA);
-        mockNft.approve(address(stakingProxy), 2);
-        stakingProxy.stake(address(mockNft), 2);
-        vm.stopPrank();
+    // function testRewardllllll() public {
+    //     allowMockNft();
+    //     uint256 day1 = block.number + 10;
+    //     vm.roll(day1);
+    //     vm.startPrank(userA);
+    //     mockNft.approve(address(stakingProxy), 2);
+    //     stakingProxy.stake(address(mockNft), 2);
+    //     vm.stopPrank();
 
-        vm.roll(day1 + 10);
-        vm.prank(owner);
-        stakingProxy.updateRewards(500);
+    //     vm.roll(day1 + 10);
+    //     vm.prank(owner);
+    //     stakingProxy.updateRewards(500);
 
-        vm.roll(day1 + 20);
-        vm.startPrank(userA);
-        stakingProxy.unstake(address(mockNft), 2);
-        vm.stopPrank();
+    //     vm.roll(day1 + 20);
+    //     vm.startPrank(userA);
+    //     stakingProxy.unstake(address(mockNft), 2);
+    //     vm.stopPrank();
 
-        (, , uint256 rewardsForUserAForId2, ) = stakingProxy.getUserData(
-            address(mockNft),
-            2
-        );
-        console.log("userA rewards for nftId 2", rewardsForUserAForId2);
-    }
+    //     (, , uint256 rewardsForUserAForId2, ) = stakingProxy.getUserData(
+    //         address(mockNft),
+    //         2
+    //     );
+    //     console.log("userA rewards for nftId 2", rewardsForUserAForId2);
+    // }
 
     function testReawardsForUsers() public {
         allowMockNft();
         uint256 day1 = block.number;
+        console.log("day1", day1);
         vm.roll(day1);
         vm.startPrank(userA);
         mockNft.approve(address(stakingProxy), 2);
@@ -97,6 +98,7 @@ contract StakingTest is Test {
         vm.stopPrank();
 
         uint256 day31 = block.number + (30 * 7200);
+        console.log("day31", day31);
         vm.roll(day31);
         vm.startPrank(userB);
         mockNft.approve(address(stakingProxy), 4);
@@ -104,6 +106,7 @@ contract StakingTest is Test {
         vm.stopPrank();
 
         uint256 day61 = day31 + (30 * 7200);
+        console.log("day61", day61);
         vm.roll(day61);
         vm.prank(owner);
         stakingProxy.updateRewards(600);
@@ -113,7 +116,8 @@ contract StakingTest is Test {
         stakingProxy.stake(address(mockNft), 5);
         vm.stopPrank();
 
-        uint256 day181 = day31 + (120 * 7200);
+        uint256 day181 = day61 + (120 * 7200);
+        console.log("day181", day181);
         vm.roll(day181);
         vm.prank(owner);
         stakingProxy.updateRewards(1200);
@@ -123,17 +127,19 @@ contract StakingTest is Test {
         stakingProxy.stake(address(mockNft), 3);
         vm.stopPrank();
 
-        uint256 day360 = day31 + (180 * 7200);
+        uint256 day360 = day181 + (180 * 7200);
+        console.log("day360", day360);
         vm.roll(day360);
         vm.startPrank(userA);
         stakingProxy.unstake(address(mockNft), 2);
-        // stakingProxy.unstake(address(mockNft), 3);
+        stakingProxy.unstake(address(mockNft), 3);
         vm.stopPrank();
 
         (, , uint256 rewardsForUserAForId2, ) = stakingProxy.getUserData(
             address(mockNft),
             2
         );
+
         (, , uint256 rewardsForUserAForId3, ) = stakingProxy.getUserData(
             address(mockNft),
             3
@@ -144,6 +150,28 @@ contract StakingTest is Test {
             "userA total Rewards",
             (rewardsForUserAForId2 + rewardsForUserAForId3)
         );
+
+        vm.startPrank(userB);
+        stakingProxy.unstake(address(mockNft), 4);
+        vm.stopPrank();
+
+        (, , uint256 rewardsForUserB, ) = stakingProxy.getUserData(
+            address(mockNft),
+            4
+        );
+
+        console.log("userB rewards", rewardsForUserB);
+
+        vm.startPrank(userC);
+        stakingProxy.unstake(address(mockNft), 5);
+        vm.stopPrank();
+
+        (, , uint256 rewardsForUserC, ) = stakingProxy.getUserData(
+            address(mockNft),
+            5
+        );
+
+        console.log("userC rewards", rewardsForUserC);
     }
 
     // Checking reward per block is 100 at start
